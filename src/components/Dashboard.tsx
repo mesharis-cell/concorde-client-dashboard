@@ -5,9 +5,14 @@ import {
   DashboardUser,
   consumeCheckInByReference,
   exportUsersCsv,
+  fetchEventFormConfig,
   fetchOverview,
   fetchUsers,
+  EventFormConfig,
+  UpdateUserPayload,
+  updateUserDetails,
 } from "../lib/api";
+import GuestEditorModal from "./GuestEditorModal";
 import StatsBar from "./StatsBar";
 import UsersTable from "./UsersTable";
 
@@ -17,7 +22,6 @@ type DashboardProps = {
   user: AdminUser;
   events: AdminEvent[];
   selectedEventId: string;
-  onSelectEvent: (eventId: string) => void;
   onLogout: () => void;
 };
 
@@ -44,7 +48,6 @@ export default function Dashboard({
   user,
   events,
   selectedEventId,
-  onSelectEvent,
   onLogout,
 }: DashboardProps) {
   const [searchInput, setSearchInput] = useState("");
@@ -61,6 +64,12 @@ export default function Dashboard({
   >(null);
   const [exporting, setExporting] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [formConfig, setFormConfig] = useState<EventFormConfig | null>(null);
+  const [formConfigLoading, setFormConfigLoading] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<DashboardUser | null>(null);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorError, setEditorError] = useState("");
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -120,6 +129,43 @@ export default function Dashboard({
     return () => window.clearInterval(interval);
   }, [loadData, selectedEventId]);
 
+  useEffect(() => {
+    if (!selectedEventId) {
+      setFormConfig(null);
+      return;
+    }
+
+    let cancelled = false;
+    setFormConfigLoading(true);
+
+    fetchEventFormConfig(apiBaseUrl, selectedEventId)
+      .then((config) => {
+        if (!cancelled) {
+          setFormConfig(config);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFormConfig(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setFormConfigLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl, selectedEventId]);
+
+  useEffect(() => {
+    setEditorOpen(false);
+    setEditingUser(null);
+    setEditorError("");
+  }, [selectedEventId]);
+
   const pending = Math.max(total - checkedIn, 0);
   const checkInRate = useMemo(
     () => toCheckInRate(total, checkedIn),
@@ -157,7 +203,12 @@ export default function Dashboard({
     setError("");
 
     try {
-      const blob = await exportUsersCsv(apiBaseUrl, token, selectedEventId);
+      const blob = await exportUsersCsv(
+        apiBaseUrl,
+        token,
+        selectedEventId,
+        "simple",
+      );
       const now = new Date();
       const filenameDate = now.toISOString().split("T")[0];
       const link = document.createElement("a");
@@ -179,6 +230,45 @@ export default function Dashboard({
     }
   }, [apiBaseUrl, token, selectedEventId]);
 
+  const handleOpenEditor = useCallback((targetUser: DashboardUser) => {
+    setEditingUser(targetUser);
+    setEditorError("");
+    setEditorOpen(true);
+  }, []);
+
+  const handleCloseEditor = useCallback(() => {
+    if (editorSaving) {
+      return;
+    }
+
+    setEditorOpen(false);
+    setEditingUser(null);
+    setEditorError("");
+  }, [editorSaving]);
+
+  const handleSaveEditor = useCallback(
+    async (userId: string, payload: UpdateUserPayload) => {
+      setEditorSaving(true);
+      setEditorError("");
+
+      try {
+        await updateUserDetails(apiBaseUrl, token, userId, payload);
+        await loadData();
+        setEditorOpen(false);
+        setEditingUser(null);
+      } catch (saveError: unknown) {
+        const message =
+          saveError instanceof Error
+            ? saveError.message
+            : "Failed to save attendee details";
+        setEditorError(message);
+      } finally {
+        setEditorSaving(false);
+      }
+    },
+    [apiBaseUrl, loadData, token],
+  );
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[1240px] flex-col gap-4 px-4 py-6 lg:px-6">
       <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -193,7 +283,8 @@ export default function Dashboard({
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <label className="text-sm text-slate-600">
+            {/* TODO: Hide event selector back in */}
+            {/* <label className="text-sm text-slate-600">
               Event
               <select
                 value={selectedEventId}
@@ -209,7 +300,7 @@ export default function Dashboard({
                   </option>
                 ))}
               </select>
-            </label>
+            </label> */}
 
             <button
               type="button"
@@ -278,11 +369,23 @@ export default function Dashboard({
         totalUsers={total}
         loading={loading}
         checkInInProgressUserId={checkInInProgressUserId}
+        onEdit={handleOpenEditor}
         onCheckIn={handleManualCheckIn}
         onPrevPage={() => setPage((current) => Math.max(current - 1, 1))}
         onNextPage={() =>
           setPage((current) => Math.min(current + 1, Math.max(totalPages, 1)))
         }
+      />
+
+      <GuestEditorModal
+        open={editorOpen}
+        user={editingUser}
+        formConfig={formConfig}
+        loadingFormConfig={formConfigLoading}
+        saving={editorSaving}
+        error={editorError}
+        onClose={handleCloseEditor}
+        onSave={handleSaveEditor}
       />
 
       <footer className="pb-6 pt-1 text-center text-xs text-slate-500">

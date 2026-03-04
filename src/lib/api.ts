@@ -23,7 +23,11 @@ export type LoginResponse = {
 
 export type FormResponseItem = {
   fieldName: string;
-  value: string | boolean | number | null;
+  fieldLabel?: string;
+  fieldType?: string;
+  value: unknown;
+  step?: string;
+  order?: number;
 };
 
 export type DashboardUser = {
@@ -61,6 +65,39 @@ export type OverviewResponse = {
   };
 };
 
+export type EventFormOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
+
+export type EventFormField = {
+  name: string;
+  type: string;
+  label: string;
+  placeholder?: string;
+  helperText?: string;
+  required?: boolean;
+  options?: EventFormOption[];
+  order?: number;
+  rows?: number;
+  multiple?: boolean;
+};
+
+export type EventFormStep = {
+  label: string;
+  subLabel?: string;
+  order?: number;
+  fields: EventFormField[];
+};
+
+export type EventFormConfig = Record<string, EventFormStep>;
+
+export type UpdateUserPayload = {
+  email?: string;
+  formResponses?: FormResponseItem[];
+};
+
 export type ConsumeCheckInResponse = {
   success: boolean;
   data?: {
@@ -76,6 +113,22 @@ export type ConsumeCheckInResponse = {
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
+
+type EventInfoResponse = {
+  success: boolean;
+  data: {
+    registrationFormConfig?: EventFormConfig;
+  };
+  error?: string;
+  details?: string;
+};
+
+type UpdateUserResponse = {
+  success: boolean;
+  data: DashboardUser;
+  error?: string;
+  details?: string;
+};
 
 async function parseJson<T>(response: Response): Promise<T> {
   const raw = (await response.json()) as T;
@@ -165,6 +218,51 @@ export async function fetchOverview(
   return result;
 }
 
+export async function fetchEventFormConfig(
+  apiBaseUrl: string,
+  eventId: string,
+): Promise<EventFormConfig> {
+  const response = await fetch(
+    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/public/events/${eventId}/info`,
+  );
+
+  const result = await parseJson<EventInfoResponse>(response);
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.error ||
+        result.details ||
+        "Failed to load event registration form configuration",
+    );
+  }
+
+  return result.data.registrationFormConfig || {};
+}
+
+export async function updateUserDetails(
+  apiBaseUrl: string,
+  token: string,
+  userId: string,
+  payload: UpdateUserPayload,
+): Promise<DashboardUser> {
+  const response = await fetch(
+    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/users/${userId}`,
+    {
+      method: "PUT",
+      headers: authHeaders(token),
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const result = await parseJson<UpdateUserResponse>(response);
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.error || result.details || "Failed to update attendee details",
+    );
+  }
+
+  return result.data;
+}
+
 export async function consumeCheckInByReference(
   apiBaseUrl: string,
   reference: string,
@@ -190,8 +288,9 @@ export async function exportUsersCsv(
   apiBaseUrl: string,
   token: string,
   eventId: string,
+  type: "simple" | "full" = "simple",
 ): Promise<Blob> {
-  const query = new URLSearchParams({ eventId, format: "csv" });
+  const query = new URLSearchParams({ eventId, format: "csv", type });
 
   const response = await fetch(
     `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/users/export?${query.toString()}`,

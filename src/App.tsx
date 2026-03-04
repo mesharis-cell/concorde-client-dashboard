@@ -102,11 +102,6 @@ export default function App() {
       user={session.user}
       events={session.user.events}
       selectedEventId={session.selectedEventId}
-      onSelectEvent={(eventId) => {
-        const nextSession = { ...session, selectedEventId: eventId };
-        setSession(nextSession);
-        persistSession(nextSession);
-      }}
       onLogout={handleLogout}
     />
   );

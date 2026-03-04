@@ -8,6 +8,7 @@ type UsersTableProps = {
   totalUsers: number;
   loading: boolean;
   checkInInProgressUserId: string | null;
+  onEdit: (user: DashboardUser) => void;
   onCheckIn: (userId: string) => Promise<void>;
   onPrevPage: () => void;
   onNextPage: () => void;
@@ -40,6 +41,7 @@ export default function UsersTable({
   totalUsers,
   loading,
   checkInInProgressUserId,
+  onEdit,
   onCheckIn,
   onPrevPage,
   onNextPage,
@@ -109,17 +111,28 @@ export default function UsersTable({
                     )}
                   </td>
                   <td className="border-b border-slate-100 px-3 py-3">
-                    {isPending ? (
-                      <CheckInButton
-                        onClick={() => {
-                          void onCheckIn(user.id);
-                        }}
-                        loading={checkInInProgressUserId === user.id}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(user)}
                         disabled={loading}
-                      />
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
+                        className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Edit
+                      </button>
+
+                      {isPending ? (
+                        <CheckInButton
+                          onClick={() => {
+                            void onCheckIn(user.id);
+                          }}
+                          loading={checkInInProgressUserId === user.id}
+                          disabled={loading}
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -23,7 +23,7 @@ export default function LoginForm({
     <div className="min-h-screen px-4 py-16">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          BLACK Demo
+          BLACK Intl. Demo
         </p>
         <h1 className="mb-2 text-2xl font-semibold text-slate-900">
           Client Dashboard Login
