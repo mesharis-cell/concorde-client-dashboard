@@ -140,7 +140,7 @@ export async function loginAdmin(
   payload: { email: string; password: string },
 ): Promise<LoginResponse> {
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/login`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/admin/login`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -184,7 +184,7 @@ export async function fetchUsers(
   }
 
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/users?${query.toString()}`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/admin/users?${query.toString()}`,
     {
       headers: authHeaders(token),
     },
@@ -204,7 +204,7 @@ export async function fetchOverview(
   eventId: string,
 ): Promise<OverviewResponse> {
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/events/${eventId}/overview`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/admin/events/${eventId}/overview`,
     {
       headers: authHeaders(token),
     },
@@ -223,7 +223,7 @@ export async function fetchEventFormConfig(
   eventId: string,
 ): Promise<EventFormConfig> {
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/public/events/${eventId}/info`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/public/events/${eventId}/info`,
   );
 
   const result = await parseJson<EventInfoResponse>(response);
@@ -245,7 +245,7 @@ export async function updateUserDetails(
   payload: UpdateUserPayload,
 ): Promise<DashboardUser> {
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/users/${userId}`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/admin/users/${userId}`,
     {
       method: "PUT",
       headers: authHeaders(token),
@@ -268,7 +268,7 @@ export async function consumeCheckInByReference(
   reference: string,
 ): Promise<ConsumeCheckInResponse> {
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/public/check-in/consume`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/public/check-in/consume`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -293,7 +293,7 @@ export async function exportUsersCsv(
   const query = new URLSearchParams({ eventId, format: "csv", type });
 
   const response = await fetch(
-    `${normalizeBaseUrl(apiBaseUrl)}/api/v1/admin/users/export?${query.toString()}`,
+    `${normalizeBaseUrl(apiBaseUrl)}/v1/admin/users/export?${query.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
